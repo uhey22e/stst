@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:11
+    ports:
+      - "15432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+  flyway:
+    image: flyway/flyway:7
+    command:
+      - -url=jdbc:postgresql://postgres/postgres
+      - -user=postgres
+      - -password=postgres
+      - -connectRetries=60
+      - migrate
+    volumes:
+      - ./tables:/flyway/sql
+    depends_on:
+      - postgres
+
