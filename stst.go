@@ -15,8 +15,8 @@ type Stst struct {
 
 var (
 	dsn         = "postgresql://postgres@localhost:15432/postgres?sslmode=disable"
-	errCols     = "Failed to read columns: %w"
-	errColTypes = "Failed to read column types: %w"
+	errCols     = "Failed to read columns"
+	errColTypes = "Failed to read column types"
 )
 
 // New is a constructor
@@ -36,12 +36,12 @@ func (s *Stst) GetMeta(query string) ([]string, []*sql.ColumnType, error) {
 
 	cols, err := rows.Columns()
 	if err != nil {
-		return nil, nil, fmt.Errorf(errCols, err)
+		return nil, nil, fmt.Errorf("%s: %w", errCols, err)
 	}
 
 	colTypes, err := rows.ColumnTypes()
 	if err != nil {
-		return nil, nil, fmt.Errorf(errColTypes, err)
+		return nil, nil, fmt.Errorf("%s: %w", errColTypes, err)
 	}
 
 	return cols, colTypes, nil
@@ -57,6 +57,11 @@ func (s *Stst) GenerateStruct(cols [][2]string) (*jen.Statement, error) {
 
 	st := jen.Type().Id("Foo").Struct(ms...)
 	return st, nil
+}
+
+// GenerateScanFunction .
+func (s *Stst) GenerateScanFunction() (*jen.Statement, error) {
+	return nil, nil
 }
 
 // Package .

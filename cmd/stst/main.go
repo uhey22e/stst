@@ -22,6 +22,8 @@ func handleError(err error) {
 func main() {
 	var (
 		sqlFile = flag.String("i", "", "Input SQL file")
+		name    = flag.String("p", "models", "Output package name")
+		outFile = flag.String("o", "", "Output file name. Output to stdout if empty.")
 	)
 	flag.Parse()
 
@@ -49,7 +51,16 @@ func main() {
 	handleError(err)
 
 	b := &bytes.Buffer{}
-	s.Package(b, "simple", []jen.Code{st})
+	s.Package(b, *name, []jen.Code{st})
 
-	fmt.Printf("%s", b.String())
+	// os.OpenFile(outFile, flag int, perm os.FileMode)
+	if *outFile != "" {
+		// dir, _ := filepath.Split(*outFile)
+		// handleError(os.MkdirAll(dir, os.ModeDir|os.ModePerm))
+
+		err := ioutil.WriteFile(*outFile, b.Bytes(), 0644)
+		handleError(err)
+	} else {
+		fmt.Printf("%s", b.String())
+	}
 }

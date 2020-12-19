@@ -1,14 +1,22 @@
 PGFORMATTER := pg_format
 PGFORMATTER_OPTS := -b
 
+RMDIR := rm -rf
+
 .PHONY: all
 all: bin/stst lint
 
-bin/stst: ./cmd/stst/main.go
-	go build -o $@ ./cmd/stst
+bin/demo: demo $(wildcard demo/*.go)
+	go build -o $@ ./$<
 
+bin/%: cmd/% $(wildcard cmd/%/*.go)
+	go build -o $@ ./$<
 
 .PHONY: lint
-lint:
+lint: $(wildcard testdata/*.sql)
 	find testdata -type f -name '*.sql' -exec \
 		$(PGFORMATTER) $(PGFORMATTER_OPTS) -o {} {} \;
+
+.PHONY: clean
+clean:
+	$(RMDIR) bin

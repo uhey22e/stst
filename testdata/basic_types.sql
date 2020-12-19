@@ -1,8 +1,7 @@
 SELECT
     bigint_col
     , text_col
-    , timestamp_col
 FROM
-    simple
+    basic_types
 LIMIT 1;
 
