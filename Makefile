@@ -3,5 +3,6 @@ PGFORMATTER_OPTS := -b
 
 
 .PHONY: lint
-lint: testdata/tables/V0_1_0__create_tables.sql
-	$(PGFORMATTER) $(PGFORMATTER_OPTS) -o $< $<
+lint:
+	find testdata -type f -name '*.sql' -exec \
+		$(PGFORMATTER) $(PGFORMATTER_OPTS) -o {} {} \;
