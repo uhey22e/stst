@@ -1,5 +1,5 @@
 PGFORMATTER := pg_format
-PGFORMATTER_OPTS := -b
+PGFORMATTER_OPTS :=
 
 RMDIR := rm -rf
 

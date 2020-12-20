@@ -1,6 +1,6 @@
 SELECT
-    bigint_col
-    , text_col
+    bigint_col,
+    text_col
 FROM
     basic_types
 LIMIT 1;

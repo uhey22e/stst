@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/dave/jennifer/jen"
@@ -16,9 +17,6 @@ func TestStst_GetMeta(t *testing.T) {
 	type fields struct {
 		db *sql.DB
 	}
-	type args struct {
-		query string
-	}
 
 	s := &Stst{
 		db: testConnectDB(t),
@@ -28,21 +26,35 @@ func TestStst_GetMeta(t *testing.T) {
 		name         string
 		sqlFile      string
 		wantCols     []string
-		wantColTypes []*sql.ColumnType
+		wantColTypes []reflect.Kind
 		wantErr      bool
 	}{
 		{
-			"Simple",
-			filepath.Join("testdata", "simple.sql"),
-			[]string{"bigint_col", "text_col", "timestamp_col"},
-			[]*sql.ColumnType{},
+			"BasicTypes",
+			filepath.Join("testdata", "basic_types.sql"),
+			[]string{"bigint_col", "text_col"},
+			[]reflect.Kind{},
+			false,
+		},
+		{
+			"ComplexTypes",
+			filepath.Join("testdata", "complex_types.sql"),
+			[]string{"bigint_col", "numeric_precision_col", "timestamp_col", "decimal_col"},
+			[]reflect.Kind{},
+			false,
+		},
+		{
+			"Nullable",
+			filepath.Join("testdata", "nullable.sql"),
+			[]string{"bigint_col", "nullable_col"},
+			[]reflect.Kind{},
 			false,
 		},
 		{
 			"InvalidQuery",
 			filepath.Join("testdata", "invalid.sql"),
 			[]string{},
-			[]*sql.ColumnType{},
+			[]reflect.Kind{},
 			true,
 		},
 	}
@@ -65,7 +77,8 @@ func TestStst_GetMeta(t *testing.T) {
 			}
 			// TODO: Test database type
 			for _, ct := range colTypes {
-				t.Log(ct)
+				v, ok := ct.Nullable()
+				t.Logf("%v : %v (%v, %v) : %v", ct.Name(), ct.DatabaseTypeName(), v, ok, ct.ScanType())
 			}
 		})
 	}
