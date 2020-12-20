@@ -31,19 +31,20 @@ func main() {
 	db, err := sql.Open("postgres", dsn)
 	handleError(err)
 
-	s := stst.New(db)
+	// Supports PostgreSQL only
+	s := stst.NewPsql(db)
 
 	q, err := ioutil.ReadFile(*sqlFile)
 	handleError(err)
 
-	_, colTypes, err := s.GetMeta(string(q))
+	cols, colTypes, err := s.GetMeta(string(q))
 	handleError(err)
 
 	members := make([][2]string, len(colTypes))
-	for i, c := range colTypes {
+	for i := 0; i < len(cols); i++ {
 		members[i] = [2]string{
-			c.Name(),
-			c.ScanType().Name(),
+			cols[i],
+			colTypes[i],
 		}
 	}
 
@@ -53,11 +54,7 @@ func main() {
 	b := &bytes.Buffer{}
 	s.Package(b, *name, []jen.Code{st})
 
-	// os.OpenFile(outFile, flag int, perm os.FileMode)
 	if *outFile != "" {
-		// dir, _ := filepath.Split(*outFile)
-		// handleError(os.MkdirAll(dir, os.ModeDir|os.ModePerm))
-
 		err := ioutil.WriteFile(*outFile, b.Bytes(), 0644)
 		handleError(err)
 	} else {

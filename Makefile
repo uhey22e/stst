@@ -9,12 +9,16 @@ all: bin/stst lint
 bin/demo: demo $(wildcard demo/*.go)
 	go build -o $@ ./$<
 
-bin/%: cmd/% $(wildcard cmd/%/*.go)
+bin/%: cmd/% go.sum $(shell find . -type f -name '*.go')
 	go build -o $@ ./$<
 
+.PHONY: test
+test:
+	go list ./... | grep -v /demo/ | go test -v
+
 .PHONY: lint
-lint: $(wildcard testdata/*.sql)
-	find testdata -type f -name '*.sql' -exec \
+lint:
+	find . -type f -name '*.sql' -exec \
 		$(PGFORMATTER) $(PGFORMATTER_OPTS) -o {} {} \;
 
 .PHONY: clean

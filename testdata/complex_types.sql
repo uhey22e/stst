@@ -1,8 +1,8 @@
 SELECT
     bigint_col,
-    numeric_precision_col,
+    double_precision_col,
     timestamp_col,
-    decimal_col
+    numeric_col
 FROM
     complex_types
 LIMIT 1;

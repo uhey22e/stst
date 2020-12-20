@@ -4,13 +4,16 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"reflect"
 
 	"github.com/dave/jennifer/jen"
 	"github.com/iancoleman/strcase"
 )
 
+// Stst .
 type Stst struct {
-	db *sql.DB
+	DB      *sql.DB
+	Typemap Typemap
 }
 
 var (
@@ -19,16 +22,17 @@ var (
 	errColTypes = "Failed to read column types"
 )
 
-// New is a constructor
-func New(db *sql.DB) *Stst {
+// NewPsql is a constructor
+func NewPsql(db *sql.DB) *Stst {
 	return &Stst{
-		db: db,
+		DB:      db,
+		Typemap: PsqlTypemap{},
 	}
 }
 
 // GetMeta returns metadata of columns
-func (s *Stst) GetMeta(query string) ([]string, []*sql.ColumnType, error) {
-	rows, err := s.db.Query(query)
+func (s *Stst) GetMeta(query string) ([]string, []string, error) {
+	rows, err := s.DB.Query(query)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -39,9 +43,17 @@ func (s *Stst) GetMeta(query string) ([]string, []*sql.ColumnType, error) {
 		return nil, nil, fmt.Errorf("%s: %w", errCols, err)
 	}
 
-	colTypes, err := rows.ColumnTypes()
-	if err != nil {
-		return nil, nil, fmt.Errorf("%s: %w", errColTypes, err)
+	colTypes := make([]string, len(cols))
+	cts, err := rows.ColumnTypes()
+	for i, ct := range cts {
+		colTypes[i] = ct.ScanType().String()
+		if ct.ScanType().Kind() == reflect.Interface {
+			if v, ok := s.Typemap.GetGoType(ct.DatabaseTypeName()); ok {
+				colTypes[i] = v
+			} else {
+				return nil, nil, fmt.Errorf("%s: %s", errColTypes, ct.DatabaseTypeName())
+			}
+		}
 	}
 
 	return cols, colTypes, nil

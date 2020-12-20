@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"io/ioutil"
 	"path/filepath"
-	"reflect"
 	"testing"
 
 	"github.com/dave/jennifer/jen"
@@ -18,43 +17,41 @@ func TestStst_GetMeta(t *testing.T) {
 		db *sql.DB
 	}
 
-	s := &Stst{
-		db: testConnectDB(t),
-	}
+	s := NewPsql(testConnectDB(t))
 
 	tests := []struct {
 		name         string
 		sqlFile      string
 		wantCols     []string
-		wantColTypes []reflect.Kind
+		wantColTypes []string
 		wantErr      bool
 	}{
 		{
 			"BasicTypes",
 			filepath.Join("testdata", "basic_types.sql"),
 			[]string{"bigint_col", "text_col"},
-			[]reflect.Kind{},
+			[]string{"int64", "string"},
 			false,
 		},
 		{
 			"ComplexTypes",
 			filepath.Join("testdata", "complex_types.sql"),
-			[]string{"bigint_col", "numeric_precision_col", "timestamp_col", "decimal_col"},
-			[]reflect.Kind{},
+			[]string{"bigint_col", "double_precision_col", "timestamp_col", "numeric_col"},
+			[]string{"int64", "float64", "time.Time", "float64"},
 			false,
 		},
 		{
 			"Nullable",
 			filepath.Join("testdata", "nullable.sql"),
 			[]string{"bigint_col", "nullable_col"},
-			[]reflect.Kind{},
+			[]string{"int64", "string"},
 			false,
 		},
 		{
 			"InvalidQuery",
 			filepath.Join("testdata", "invalid.sql"),
 			[]string{},
-			[]reflect.Kind{},
+			[]string{},
 			true,
 		},
 	}
@@ -66,19 +63,17 @@ func TestStst_GetMeta(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Stst.GetMeta() error = %v, wantErr %v", err, tt.wantErr)
 				return
-			}
-			if err != nil {
+			} else if err != nil {
 				t.Logf("Expected error: %v", err)
 				return
 			}
 
 			if !cmp.Equal(cols, tt.wantCols) {
-				t.Errorf("Stst.GetMeta() got = %v, want %v", cols, tt.wantCols)
+				t.Errorf("Stst.GetMeta() cols got = %v, want %v", cols, tt.wantCols)
 			}
-			// TODO: Test database type
-			for _, ct := range colTypes {
-				v, ok := ct.Nullable()
-				t.Logf("%v : %v (%v, %v) : %v", ct.Name(), ct.DatabaseTypeName(), v, ok, ct.ScanType())
+
+			if !cmp.Equal(colTypes, tt.wantColTypes) {
+				t.Errorf("Stst.GetMeta() colTypes got = %v, want %v", colTypes, tt.wantColTypes)
 			}
 		})
 	}
@@ -89,7 +84,7 @@ func TestStst_GenerateStruct(t *testing.T) {
 		db *sql.DB
 	}
 
-	s := &Stst{nil}
+	s := NewPsql(nil)
 	tests := []struct {
 		name    string
 		cols    [][2]string
@@ -127,7 +122,7 @@ func TestStst_GenerateStruct(t *testing.T) {
 }
 
 func TestStst_Package(t *testing.T) {
-	s := &Stst{nil}
+	s := NewPsql(nil)
 	w := &bytes.Buffer{}
 	codes := []jen.Code{
 		jen.Type().Id("TestStruct").Struct(
