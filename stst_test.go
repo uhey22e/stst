@@ -28,45 +28,83 @@ func TestStst_GetMeta(t *testing.T) {
 	s := NewPsql(testConnectDB(t))
 
 	tests := []struct {
-		name         string
-		sqlFile      string
-		wantCols     []string
-		wantColTypes []string
-		wantErr      bool
+		name    string
+		sqlFile string
+		want    []ColInfo
+		wantErr bool
 	}{
 		{
 			"BasicTypes",
 			filepath.Join("testdata", "basic_types.sql"),
-			[]string{"bigint_col", "text_col"},
-			[]string{"int64", "string"},
+			[]ColInfo{
+				{
+					Name:        "bigint_col",
+					GoTypeName:  "int64",
+					PackagePath: "",
+				},
+				{
+					Name:        "text_col",
+					GoTypeName:  "string",
+					PackagePath: "",
+				},
+			},
 			false,
 		},
 		{
 			"ComplexTypes",
 			filepath.Join("testdata", "complex_types.sql"),
-			[]string{"bigint_col", "double_precision_col", "timestamp_col", "numeric_col"},
-			[]string{"int64", "float64", "time.Time", "float64"},
+			[]ColInfo{
+				{
+					Name:        "bigint_col",
+					GoTypeName:  "int64",
+					PackagePath: "",
+				},
+				{
+					Name:        "double_precision_col",
+					GoTypeName:  "float64",
+					PackagePath: "",
+				},
+				{
+					Name:        "timestamp_col",
+					GoTypeName:  "Time",
+					PackagePath: "time",
+				},
+				{
+					Name:        "numeric_col",
+					GoTypeName:  "float64",
+					PackagePath: "",
+				},
+			},
 			false,
 		},
 		{
 			"Nullable",
 			filepath.Join("testdata", "nullable.sql"),
-			[]string{"bigint_col", "nullable_col"},
-			[]string{"int64", "string"},
+			[]ColInfo{
+				{
+					Name:        "bigint_col",
+					GoTypeName:  "int64",
+					PackagePath: "",
+				},
+				{
+					Name:        "nullable_col",
+					GoTypeName:  "string",
+					PackagePath: "",
+				},
+			},
 			false,
 		},
 		{
 			"InvalidQuery",
 			filepath.Join("testdata", "invalid.sql"),
-			[]string{},
-			[]string{},
+			[]ColInfo{},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			q := testLoadQuery(t, tt.sqlFile)
-			cols, colTypes, err := s.GetMeta(q)
+			cols, err := s.GetMeta(q)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Stst.GetMeta() error = %v, wantErr %v", err, tt.wantErr)
@@ -76,12 +114,8 @@ func TestStst_GetMeta(t *testing.T) {
 				return
 			}
 
-			if !cmp.Equal(cols, tt.wantCols) {
-				t.Errorf("Stst.GetMeta() cols got = %v, want %v", cols, tt.wantCols)
-			}
-
-			if !cmp.Equal(colTypes, tt.wantColTypes) {
-				t.Errorf("Stst.GetMeta() colTypes got = %v, want %v", colTypes, tt.wantColTypes)
+			if !cmp.Equal(cols, tt.want) {
+				t.Errorf("Stst.GetMeta() got = %v, want %v", cols, tt.want)
 			}
 		})
 	}
@@ -96,18 +130,29 @@ func TestStst_GenerateStruct(t *testing.T) {
 	tests := []struct {
 		name    string
 		sname   string
-		cols    [][3]string
+		cols    []ColInfo
 		want    string
 		wantErr bool
 	}{
 		{
 			"Case1",
 			"Demo",
-			[][3]string{
-				{"col1", "", "int64"},
-				{"col2", "", "string"},
-				{"col3", "", "float64"},
-				{"col4", "", "string"},
+			[]ColInfo{
+				{
+					Name:        "col1",
+					GoTypeName:  "int64",
+					PackagePath: "",
+				},
+				{
+					Name:        "col2",
+					GoTypeName:  "string",
+					PackagePath: "",
+				},
+				{
+					Name:        "col3",
+					GoTypeName:  "float64",
+					PackagePath: "",
+				},
 			},
 			formatGoCode(t, `
 				package models
@@ -116,7 +161,6 @@ func TestStst_GenerateStruct(t *testing.T) {
 					Col1 int64
 					Col2 string
 					Col3 float64
-					Col4 string
 				}
 			`),
 			false,
@@ -124,9 +168,17 @@ func TestStst_GenerateStruct(t *testing.T) {
 		{
 			"Case2",
 			"Demo",
-			[][3]string{
-				{"bigint_col", "", "int64"},
-				{"timestamp_col", "time", "Time"},
+			[]ColInfo{
+				{
+					Name:        "bigint_col",
+					GoTypeName:  "int64",
+					PackagePath: "",
+				},
+				{
+					Name:        "timestamp_col",
+					GoTypeName:  "Time",
+					PackagePath: "time",
+				},
 			},
 			formatGoCode(t, `
 				package models
@@ -162,7 +214,17 @@ func TestStst_GenerateStruct(t *testing.T) {
 
 func TestStst_GenerateGetScanDestsFunc(t *testing.T) {
 	s := NewPsql(nil)
-	cols := []string{"Col1", "Col2", "Col3"}
+	cols := []ColInfo{
+		{
+			Name: "Col1",
+		},
+		{
+			Name: "Col2",
+		},
+		{
+			Name: "Col3",
+		},
+	}
 
 	want := formatGoCode(t, `
 		package models

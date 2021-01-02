@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 
 	"github.com/dave/jennifer/jen"
 	"github.com/iancoleman/strcase"
@@ -14,6 +15,12 @@ import (
 type Stst struct {
 	DB      *sql.DB
 	Typemap Typemap
+}
+
+type ColInfo struct {
+	Name        string
+	GoTypeName  string
+	PackagePath string
 }
 
 var (
@@ -31,40 +38,54 @@ func NewPsql(db *sql.DB) *Stst {
 }
 
 // GetMeta returns metadata of columns
-func (s *Stst) GetMeta(query string) ([]string, []string, error) {
+func (s *Stst) GetMeta(query string) ([]ColInfo, error) {
 	rows, err := s.DB.Query(query)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
 	cols, err := rows.Columns()
 	if err != nil {
-		return nil, nil, fmt.Errorf("%s: %w", errCols, err)
+		return nil, fmt.Errorf("%s: %w", errCols, err)
 	}
 
-	colTypes := make([]string, len(cols))
 	cts, err := rows.ColumnTypes()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", errColTypes, err)
+	}
+
+	ms := make([]ColInfo, len(cols))
 	for i, ct := range cts {
-		colTypes[i] = ct.ScanType().String()
+		ms[i].Name = ct.Name()
+		ms[i].GoTypeName = ct.ScanType().String()
+		ms[i].PackagePath = ""
+
 		if ct.ScanType().Kind() == reflect.Interface {
 			if v, ok := s.Typemap.GetGoType(ct.DatabaseTypeName()); ok {
-				colTypes[i] = v
+				ms[i].GoTypeName = v
 			} else {
-				return nil, nil, fmt.Errorf("%s: %s", errColTypes, ct.DatabaseTypeName())
+				return nil, fmt.Errorf("%s: %s", errColTypes, ct.DatabaseTypeName())
 			}
+		}
+
+		s := strings.Split(ms[i].GoTypeName, ".")
+		if len(s) == 2 {
+			ms[i].PackagePath = s[0]
+			ms[i].GoTypeName = s[1]
 		}
 	}
 
-	return cols, colTypes, nil
+	return ms, nil
 }
 
 // GenerateStruct .
-func (s *Stst) GenerateStruct(name string, cols [][3]string) (*jen.Statement, error) {
+func (s *Stst) GenerateStruct(name string, cols []ColInfo) (*jen.Statement, error) {
 	// Use []jen.Code instead of []*jen.Statement to pass it to jen.Structs()
 	ms := make([]jen.Code, len(cols))
 	for i, c := range cols {
-		ms[i] = jen.Id(strcase.ToCamel(c[0])).Add(jen.Qual(c[1], c[2]))
+		n := strcase.ToCamel(c.Name)
+		ms[i] = jen.Id(n).Add(jen.Qual(c.PackagePath, c.GoTypeName))
 	}
 
 	st := jen.Type().Id(name).Struct(ms...)
@@ -72,18 +93,18 @@ func (s *Stst) GenerateStruct(name string, cols [][3]string) (*jen.Statement, er
 }
 
 // GenerateGetScanDestsFunc .
-func (s *Stst) GenerateGetScanDestsFunc(structName string, fieldNames []string) (*jen.Statement, error) {
+func (s *Stst) GenerateGetScanDestsFunc(structName string, cols []ColInfo) (*jen.Statement, error) {
 	recn := "x"
 	rec := jen.Id(recn).Op("*").Id(structName)
 
 	fn := "GetScanDests"
-	sig := jen.Func().Params(rec).Id(fn).Params().Index().Interface()
+	rettype := jen.Index().Interface() // []interface{}
+	sig := jen.Func().Params(rec).Id(fn).Params().Add(rettype)
 
-	fields := make([]jen.Code, len(fieldNames))
-	for i, n := range fieldNames {
-		fields[i] = jen.Op("&").Id(recn).Dot(n)
+	fields := make([]jen.Code, len(cols))
+	for i, c := range cols {
+		fields[i] = jen.Op("&").Id(recn).Dot(strcase.ToCamel(c.Name))
 	}
-
 	ret := jen.Return(
 		jen.Index().Interface().Values(fields...),
 	)
