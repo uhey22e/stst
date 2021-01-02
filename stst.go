@@ -60,20 +60,37 @@ func (s *Stst) GetMeta(query string) ([]string, []string, error) {
 }
 
 // GenerateStruct .
-func (s *Stst) GenerateStruct(cols [][2]string) (*jen.Statement, error) {
+func (s *Stst) GenerateStruct(name string, cols [][3]string) (*jen.Statement, error) {
 	// Use []jen.Code instead of []*jen.Statement to pass it to jen.Structs()
 	ms := make([]jen.Code, len(cols))
 	for i, c := range cols {
-		ms[i] = jen.Id(strcase.ToCamel(c[0])).Add(jen.Id(c[1]))
+		ms[i] = jen.Id(strcase.ToCamel(c[0])).Add(jen.Qual(c[1], c[2]))
 	}
 
-	st := jen.Type().Id("Foo").Struct(ms...)
+	st := jen.Type().Id(name).Struct(ms...)
 	return st, nil
 }
 
-// GenerateScanFunction .
-func (s *Stst) GenerateScanFunction() (*jen.Statement, error) {
-	return nil, nil
+// GenerateGetScanDestsFunc .
+func (s *Stst) GenerateGetScanDestsFunc(structName string, fieldNames []string) (*jen.Statement, error) {
+	recn := "x"
+	rec := jen.Id(recn).Op("*").Id(structName)
+
+	fn := "GetScanDests"
+	sig := jen.Func().Params(rec).Id(fn).Params().Index().Interface()
+
+	fields := make([]jen.Code, len(fieldNames))
+	for i, n := range fieldNames {
+		fields[i] = jen.Op("&").Id(recn).Dot(n)
+	}
+
+	ret := jen.Return(
+		jen.Index().Interface().Values(fields...),
+	)
+
+	res := sig.Block(ret)
+
+	return res, nil
 }
 
 // Package .

@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"io/ioutil"
 	"log"
 
 	_ "github.com/lib/pq"
@@ -20,15 +19,31 @@ func main() {
 	db, err := sql.Open("postgres", dsn)
 	handleError(err)
 
-	q, err := ioutil.ReadFile("testdata/basic_types.sql")
+	r1, err := db.Query(models.DemoCountQuery)
 	handleError(err)
+	defer r1.Close()
 
-	rows, err := db.Query(string(q))
-	handleError(err)
-
-	for rows.Next() {
-		var m models.Foo
-		rows.Scan(&m.BigintCol, &m.TextCol)
-		log.Printf("%+v\n", m)
+	var count int64
+	if v := r1.Next(); !v {
+		log.Printf("Failed to get count")
 	}
+	r1.Scan(&count)
+	log.Printf("Count %d", count)
+
+	if count == 0 {
+		return
+	}
+
+	r2, err := db.Query(models.DemoQuery)
+	handleError(err)
+	defer r2.Close()
+
+	result := make([]models.Demo, 0, count)
+	for r2.Next() {
+		var x models.Demo
+		r2.Scan(x.GetScanDests()...)
+		result = append(result, x)
+	}
+
+	log.Printf("%+v\n", result)
 }

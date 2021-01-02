@@ -3,6 +3,8 @@ package stst
 import (
 	"bytes"
 	"database/sql"
+	"fmt"
+	"go/format"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -11,6 +13,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 	_ "github.com/lib/pq"
 )
+
+func TestCountWrap(t *testing.T) {
+	q := `select * from basic_types limit 10`
+	wrapped := fmt.Sprintf(`select count(*) from (%s) x1;`, q)
+	t.Log(wrapped)
+}
 
 func TestStst_GetMeta(t *testing.T) {
 	type fields struct {
@@ -87,43 +95,101 @@ func TestStst_GenerateStruct(t *testing.T) {
 	s := NewPsql(nil)
 	tests := []struct {
 		name    string
-		cols    [][2]string
-		want    *jen.Statement
+		sname   string
+		cols    [][3]string
+		want    string
 		wantErr bool
 	}{
 		{
-			"Case",
-			[][2]string{
-				{"bigint_col", "int64"},
-				{"timestamp_col", "time.Time"},
+			"Case1",
+			"Demo",
+			[][3]string{
+				{"col1", "", "int64"},
+				{"col2", "", "string"},
+				{"col3", "", "float64"},
+				{"col4", "", "string"},
 			},
-			jen.Type().Id("Foo").Struct(
-				jen.Id("BigintCol").Int64(),
-				jen.Id("TimestampCol").Add(jen.Id("time.Time")),
-			),
+			formatGoCode(t, `
+				package models
+
+				type Demo struct {
+					Col1 int64
+					Col2 string
+					Col3 float64
+					Col4 string
+				}
+			`),
+			false,
+		},
+		{
+			"Case2",
+			"Demo",
+			[][3]string{
+				{"bigint_col", "", "int64"},
+				{"timestamp_col", "time", "Time"},
+			},
+			formatGoCode(t, `
+				package models
+
+				import "time"
+
+				type Demo struct {
+					BigintCol    int64
+					TimestampCol time.Time
+				}
+			`),
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := s.GenerateStruct(tt.cols)
+			got, err := s.GenerateStruct(tt.sname, tt.cols)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Stst.GenerateStruct() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
-			if !cmp.Equal(got.GoString(), tt.want.GoString()) {
-				t.Errorf("Stst.GenerateStruct() got = %v, want %v", got, tt.want)
-			} else {
-				t.Logf("\n%#v\n", got)
+			f := jen.NewFile("models")
+			f.Add(got)
+			gotfmt := f.GoString()
+
+			if gotfmt != tt.want {
+				t.Errorf("Stst.GenerateStruct() got =\n%v\nwant =\n%v", gotfmt, tt.want)
 			}
 		})
+	}
+}
+
+func TestStst_GenerateGetScanDestsFunc(t *testing.T) {
+	s := NewPsql(nil)
+	cols := []string{"Col1", "Col2", "Col3"}
+
+	want := formatGoCode(t, `
+		package models
+
+		func (x *Demo) GetScanDests() []interface{} {
+			return []interface{}{&x.Col1, &x.Col2, &x.Col3}
+		}
+	`)
+
+	res, err := s.GenerateGetScanDestsFunc("Demo", cols)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f := jen.NewFile("models")
+	f.Add(res)
+	got := f.GoString()
+
+	if got != want {
+		t.Errorf("Stst.GenerateGetScanDestsFunc() got =\n%v\nwant =\n%v", got, want)
 	}
 }
 
 func TestStst_Package(t *testing.T) {
 	s := NewPsql(nil)
 	w := &bytes.Buffer{}
+
 	codes := []jen.Code{
 		jen.Type().Id("TestStruct").Struct(
 			jen.Id("Member1").Int(),
@@ -161,4 +227,17 @@ func testLoadQuery(t *testing.T, filename string) string {
 		t.Fatal(err)
 	}
 	return string(q)
+}
+
+func formatGoCode(t *testing.T, code string) string {
+	t.Helper()
+
+	buf := bytes.NewBufferString(code)
+	fmt, err := format.Source(buf.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := string(fmt)
+
+	return res
 }
