@@ -115,8 +115,14 @@ func (s *Stst) GenerateGetScanDestsFunc(structName string, cols []ColInfo) (*jen
 }
 
 // Package .
-func (s *Stst) Package(w io.Writer, name string, codes []jen.Code) error {
+func (s *Stst) Package(w io.Writer, name string, codes []jen.Code, pkgComments []string) error {
 	f := jen.NewFile(name)
+	if pkgComments != nil {
+		for _, c := range pkgComments {
+			f.PackageComment(c)
+		}
+	}
+
 	for _, c := range codes {
 		f.Add(c)
 	}

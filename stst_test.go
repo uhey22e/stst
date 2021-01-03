@@ -231,8 +231,7 @@ func TestStst_GenerateGetScanDestsFunc(t *testing.T) {
 
 		func (x *Demo) GetScanDests() []interface{} {
 			return []interface{}{&x.Col1, &x.Col2, &x.Col3}
-		}
-	`)
+		}`)
 
 	res, err := s.GenerateGetScanDestsFunc("Demo", cols)
 	if err != nil {
@@ -263,7 +262,7 @@ func TestStst_Package(t *testing.T) {
 		),
 	}
 
-	if err := s.Package(w, "test", codes); err != nil {
+	if err := s.Package(w, "test", codes, nil); err != nil {
 		t.Fatalf("Stst.Package() error = %v", err)
 	} else {
 		t.Logf("\n%s", w.String())
