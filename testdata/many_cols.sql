@@ -1,0 +1,22 @@
+SELECT
+    123::bigint AS col01,
+    123::bigint AS col02,
+    123::bigint AS col03,
+    123::bigint AS col04,
+    123::bigint AS col05,
+    123::bigint AS col06,
+    123::bigint AS col07,
+    123::bigint AS col08,
+    123::bigint AS col09,
+    123::bigint AS col10,
+    123::bigint AS col11,
+    123::bigint AS col12,
+    123::bigint AS col13,
+    123::bigint AS col14,
+    123::bigint AS col15,
+    123::bigint AS col16,
+    123::bigint AS col17,
+    123::bigint AS col18,
+    123::bigint AS col19,
+    123::bigint AS col20;
+

@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"io/ioutil"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/dave/jennifer/jen"
@@ -14,9 +15,43 @@ import (
 	_ "github.com/lib/pq"
 )
 
+func testConnectDB(t *testing.T) *sql.DB {
+	t.Helper()
+
+	dsn := "postgresql://postgres:postgres@localhost:15432/postgres?sslmode=disable"
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return db
+}
+
+func testLoadQuery(t *testing.T, filename string) string {
+	t.Helper()
+
+	q, err := ioutil.ReadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(q)
+}
+
+func formatGoCode(t *testing.T, code string) string {
+	t.Helper()
+
+	buf := bytes.NewBufferString(code)
+	fmt, err := format.Source(buf.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := string(fmt)
+
+	return res
+}
+
 func TestCountWrap(t *testing.T) {
-	q := `select * from basic_types limit 10`
-	wrapped := fmt.Sprintf(`select count(*) from (%s) x1;`, q)
+	q := `select * from basic_types limit 10;`
+	wrapped := fmt.Sprintf(`select count(*) from (%s) x1;`, trimSemicolon(q))
 	t.Log(wrapped)
 }
 
@@ -269,36 +304,34 @@ func TestStst_Package(t *testing.T) {
 	}
 }
 
-func testConnectDB(t *testing.T) *sql.DB {
-	t.Helper()
-
-	dsn := "postgresql://postgres:postgres@localhost:15432/postgres?sslmode=disable"
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		t.Fatal(err)
+func Test_trimSemicolon(t *testing.T) {
+	tests := []struct {
+		test string
+		want string
+	}{
+		{
+			"select * from table;",
+			"select * from table",
+		},
+		{
+			`select
+				col01,
+				col02
+			from table01
+			;
+			`,
+			`select
+				col01,
+				col02
+			from table01
+			`,
+		},
 	}
-	return db
-}
-
-func testLoadQuery(t *testing.T, filename string) string {
-	t.Helper()
-
-	q, err := ioutil.ReadFile(filename)
-	if err != nil {
-		t.Fatal(err)
+	for i, tt := range tests {
+		t.Run("Case"+strconv.Itoa(i), func(t *testing.T) {
+			if got := trimSemicolon(tt.test); got != tt.want {
+				t.Errorf("trimSemicolon() = %v, want %v", got, tt.want)
+			}
+		})
 	}
-	return string(q)
-}
-
-func formatGoCode(t *testing.T, code string) string {
-	t.Helper()
-
-	buf := bytes.NewBufferString(code)
-	fmt, err := format.Source(buf.Bytes())
-	if err != nil {
-		t.Fatal(err)
-	}
-	res := string(fmt)
-
-	return res
 }

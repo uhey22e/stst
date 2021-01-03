@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"flag"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -28,7 +27,7 @@ func handleError(err error) {
 func main() {
 	var (
 		sqlFile = flag.String("i", "", "Input SQL file")
-		name    = flag.String("p", "models", "Output package name")
+		name    = flag.String("p", "models", "Output package name.")
 		outFile = flag.String("o", "", "Output file name. Output to stdout if empty.")
 	)
 	flag.Parse()
@@ -49,7 +48,8 @@ func main() {
 	st, err := s.GenerateStruct("Demo", cols)
 	handleError(err)
 
-	qv := jen.Const().Id("DemoQuery").Op("=").Id(fmt.Sprintf("`\n%s`", q))
+	qv, err := s.GenerateQueryVar("Demo", string(q))
+	handleError(err)
 
 	f, err := s.GenerateGetScanDestsFunc("Demo", cols)
 	handleError(err)
