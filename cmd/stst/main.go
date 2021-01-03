@@ -28,6 +28,7 @@ func main() {
 	var (
 		sqlFile = flag.String("i", "", "Input SQL file")
 		name    = flag.String("p", "models", "Output package name.")
+		sname   = flag.String("n", "", "Output struct type name.")
 		outFile = flag.String("o", "", "Output file name. Output to stdout if empty.")
 	)
 	flag.Parse()
@@ -45,20 +46,21 @@ func main() {
 	cols, err := s.GetMeta(string(q))
 	handleError(err)
 
-	st, err := s.GenerateStruct("Demo", cols)
+	st, err := s.GenerateStruct(*sname, cols)
 	handleError(err)
 
-	qv, err := s.GenerateQueryVar("Demo", string(q))
+	qv, err := s.GenerateQueryVar(*sname, string(q))
 	handleError(err)
 
-	f, err := s.GenerateGetScanDestsFunc("Demo", cols)
+	f, err := s.GenerateGetScanDestsFunc(*sname, cols)
 	handleError(err)
 
 	var dest io.Writer
 	if *outFile != "" {
-		dest, err := os.Create(*outFile)
+		f, err := os.Create(*outFile)
 		handleError(err)
-		defer dest.Close()
+		defer f.Close()
+		dest = f
 	} else {
 		dest = os.Stdout
 	}
