@@ -19,31 +19,13 @@ func main() {
 	db, err := sql.Open("postgres", dsn)
 	handleError(err)
 
-	r1, err := db.Query(models.DemoCountQuery)
+	r, err := db.Query(models.DemoQuery)
 	handleError(err)
-	defer r1.Close()
+	defer r.Close()
 
-	var count int64
-	if v := r1.Next(); !v {
-		log.Printf("Failed to get count")
-	}
-	r1.Scan(&count)
-	log.Printf("Count %d", count)
-
-	if count == 0 {
-		return
-	}
-
-	r2, err := db.Query(models.DemoQuery)
-	handleError(err)
-	defer r2.Close()
-
-	result := make([]models.Demo, 0, count)
-	for r2.Next() {
+	for r.Next() {
 		var x models.Demo
-		r2.Scan(x.GetScanDests()...)
-		result = append(result, x)
+		r.Scan(x.GetScanDests()...)
+		log.Printf("%+v", x)
 	}
-
-	log.Printf("%+v\n", result)
 }
