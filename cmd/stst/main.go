@@ -32,7 +32,7 @@ func main() {
 	)
 	flag.Parse()
 
-	dsn := "postgresql://postgres:postgres@localhost:15432/postgres?sslmode=disable"
+	dsn := "postgresql://postgres:postgres@localhost:15432/dvdrental?sslmode=disable"
 	db, err := sql.Open("postgres", dsn)
 	handleError(err)
 

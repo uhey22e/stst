@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:11
+    ports:
+      - "15432:5432"
+    environment:
+      POSTGRES_DB: dvdrental
+      POSTGRES_PASSWORD: postgres
+  dvdrental:
+    build: .
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_DB: dvdrental
+      PGPASSWORD: postgres
