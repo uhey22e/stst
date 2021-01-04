@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS public.complex_types;
+
 CREATE TABLE public.complex_types (
     bigint_col bigint NOT NULL PRIMARY KEY,
     double_precision_col double precision NOT NULL,

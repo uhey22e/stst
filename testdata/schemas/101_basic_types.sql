@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS public.basic_types;
+
 CREATE TABLE public.basic_types (
     bigint_col bigint NOT NULL PRIMARY KEY,
     text_col text NOT NULL

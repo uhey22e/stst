@@ -7,7 +7,9 @@ import (
 	"go/format"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/dave/jennifer/jen"
@@ -24,6 +26,31 @@ func testConnectDB(t *testing.T) *sql.DB {
 		t.Fatal(err)
 	}
 	return db
+}
+
+func testCreateDatabase(t *testing.T, db *sql.DB) {
+	// Create database, tables and insert test data.
+
+	matches, err := filepath.Glob("testdata/schemas/*.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	blank := regexp.MustCompile(`^\s*$`)
+	for _, f := range matches {
+		b, err := ioutil.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		queries := strings.Split(string(b), ";")
+		for _, q := range queries {
+			if !blank.MatchString(q) {
+				_, err := db.Exec(q)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
 }
 
 func testLoadQuery(t *testing.T, filename string) string {
@@ -60,7 +87,10 @@ func TestStst_GetMeta(t *testing.T) {
 		db *sql.DB
 	}
 
-	s := NewPsql(testConnectDB(t))
+	db := testConnectDB(t)
+	testCreateDatabase(t, db)
+
+	s := NewPsql(db)
 
 	tests := []struct {
 		name    string
@@ -70,7 +100,7 @@ func TestStst_GetMeta(t *testing.T) {
 	}{
 		{
 			"BasicTypes",
-			filepath.Join("testdata", "basic_types.sql"),
+			filepath.Join("testdata", "queries", "basic_types.sql"),
 			[]ColInfo{
 				{
 					Name:        "bigint_col",
@@ -87,7 +117,7 @@ func TestStst_GetMeta(t *testing.T) {
 		},
 		{
 			"ComplexTypes",
-			filepath.Join("testdata", "complex_types.sql"),
+			filepath.Join("testdata", "queries", "complex_types.sql"),
 			[]ColInfo{
 				{
 					Name:        "bigint_col",
@@ -114,7 +144,7 @@ func TestStst_GetMeta(t *testing.T) {
 		},
 		{
 			"Nullable",
-			filepath.Join("testdata", "nullable.sql"),
+			filepath.Join("testdata", "queries", "nullable.sql"),
 			[]ColInfo{
 				{
 					Name:        "bigint_col",
@@ -131,7 +161,7 @@ func TestStst_GetMeta(t *testing.T) {
 		},
 		{
 			"InvalidQuery",
-			filepath.Join("testdata", "invalid.sql"),
+			filepath.Join("testdata", "queries", "invalid.sql"),
 			[]ColInfo{},
 			true,
 		},

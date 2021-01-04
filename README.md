@@ -55,6 +55,20 @@ For more examples, please see [demo project](./demo).
 To be written...
 
 
-## Usage scenarios
+## Tests
 
-To be written...
+A runnning PostgreSQL server is required for tests.
+
+Run local PostgreSQL server using docker:
+
+```
+$ cd testdb
+$ docker-compose up -d
+```
+
+Run tests:
+
+```
+$ go test -v
+```
+

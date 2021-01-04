@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS public.nullable;
+
 CREATE TABLE public.nullable (
     bigint_col bigserial PRIMARY KEY,
     nullable_col text
