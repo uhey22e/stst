@@ -73,7 +73,10 @@ func testLoadQuery(t *testing.T, filename string) string {
 func formatGoCode(t *testing.T, code string) string {
 	t.Helper()
 
-	buf := bytes.NewBufferString(code)
+	rplr := strings.NewReplacer("'", "`")
+	c2 := rplr.Replace(code)
+
+	buf := bytes.NewBufferString(c2)
 	fmt, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Fatal(err)
@@ -200,11 +203,12 @@ func TestStst_GenerateStruct(t *testing.T) {
 
 	s := NewPsql(nil)
 	tests := []struct {
-		name    string
-		sname   string
-		cols    []ColInfo
-		want    string
-		wantErr bool
+		name       string
+		sname      string
+		cols       []ColInfo
+		customizer []MemberCustomizer
+		want       string
+		wantErr    bool
 	}{
 		{
 			"Case1",
@@ -226,6 +230,7 @@ func TestStst_GenerateStruct(t *testing.T) {
 					PackagePath: "",
 				},
 			},
+			nil,
 			formatGoCode(t, `
 				package models
 
@@ -252,14 +257,17 @@ func TestStst_GenerateStruct(t *testing.T) {
 					PackagePath: "time",
 				},
 			},
+			[]MemberCustomizer{
+				AppendColNameTag("boil"),
+			},
 			formatGoCode(t, `
 				package models
 
 				import "time"
 
 				type Demo struct {
-					BigintCol    int64
-					TimestampCol time.Time
+					BigintCol    int64     'boil:"bigint_col"'
+					TimestampCol time.Time 'boil:"timestamp_col"'
 				}
 			`),
 			false,
@@ -267,7 +275,7 @@ func TestStst_GenerateStruct(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := s.GenerateStruct(tt.sname, tt.cols)
+			got, err := s.GenerateStruct(tt.sname, tt.cols, tt.customizer...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Stst.GenerateStruct() error = %v, wantErr %v", err, tt.wantErr)
 				return

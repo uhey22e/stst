@@ -31,11 +31,12 @@ func handleError(err error) {
 
 func main() {
 	var (
-		showVersion = flag.Bool("v", false, "Show version.")
-		sqlFile     = flag.String("i", "", "Input SQL file.")
-		name        = flag.String("p", "models", "Output package name.")
-		sname       = flag.String("n", "", "Output struct type name.")
-		outFile     = flag.String("o", "", "Output file name. Output to stdout if empty.")
+		showVersion   = flag.Bool("v", false, "Show version.")
+		sqlFile       = flag.String("i", "", "Input SQL file.")
+		name          = flag.String("p", "models", "Output package name.")
+		sname         = flag.String("n", "", "Output struct type name.")
+		outFile       = flag.String("o", "", "Output file name. Output to stdout if empty.")
+		appendBoilTag = flag.Bool("b", false, "Append tag to the struct for SQLBoiler.")
 	)
 	flag.Parse()
 
@@ -60,7 +61,11 @@ func main() {
 	cols, err := s.GetMeta(string(q))
 	handleError(err)
 
-	st, err := s.GenerateStruct(*sname, cols)
+	cs := []stst.MemberCustomizer{}
+	if *appendBoilTag {
+		cs = append(cs, stst.AppendColNameTag("boil"))
+	}
+	st, err := s.GenerateStruct(*sname, cols, cs...)
 	handleError(err)
 
 	qv, err := s.GenerateQueryVar(*sname, string(q))

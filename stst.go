@@ -41,6 +41,8 @@ type Typemap interface {
 	GetGoType(databaseTypeName string) (string, bool)
 }
 
+type MemberCustomizer func(*jen.Statement, *ColInfo)
+
 var (
 	errCols     = "Failed to read columns"
 	errColTypes = "Failed to read column types"
@@ -97,11 +99,15 @@ func (s *Stst) GetMeta(query string) ([]ColInfo, error) {
 }
 
 // GenerateStruct assembles the struct from ColInfo.
-func (s *Stst) GenerateStruct(name string, cols []ColInfo) (*jen.Statement, error) {
+func (s *Stst) GenerateStruct(name string, cols []ColInfo, memberCustomizer ...MemberCustomizer) (*jen.Statement, error) {
 	st := jen.Type().Id(name).StructFunc(func(g *jen.Group) {
 		for _, c := range cols {
 			n := strcase.ToCamel(c.Name)
-			g.Id(n).Qual(c.PackagePath, c.GoTypeName)
+			m := jen.Id(n).Qual(c.PackagePath, c.GoTypeName)
+			for _, mc := range memberCustomizer {
+				mc(m, &c)
+			}
+			g.Add(m)
 		}
 	})
 	return st, nil
@@ -152,6 +158,15 @@ func (s *Stst) Package(w io.Writer, name string, codes []jen.Code, pkgComments [
 		return err
 	}
 	return nil
+}
+
+// AppendColNameTag is an option for GenerateStruct()
+func AppendColNameTag(key string) MemberCustomizer {
+	return func(s *jen.Statement, c *ColInfo) {
+		s.Tag(map[string]string{
+			key: c.Name,
+		})
+	}
 }
 
 func trimSemicolon(q string) string {

@@ -21,10 +21,10 @@ ORDER BY
 LIMIT 10;`
 
 type PopularActor struct {
-	ActorId    int32
-	FirstName  string
-	LastName   string
-	FilmsCount int64
+	ActorId    int32  `boil:"actor_id"`
+	FirstName  string `boil:"first_name"`
+	LastName   string `boil:"last_name"`
+	FilmsCount int64  `boil:"films_count"`
 }
 
 func (x *PopularActor) GetScanDests() []interface{} {

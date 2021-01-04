@@ -23,11 +23,11 @@ GROUP BY
 LIMIT 10;`
 
 type HardworkingStaff struct {
-	StaffId      int32
-	FirstName    string
-	LastName     string
-	PaymentMonth time.Time
-	Amount       float64
+	StaffId      int32     `boil:"staff_id"`
+	FirstName    string    `boil:"first_name"`
+	LastName     string    `boil:"last_name"`
+	PaymentMonth time.Time `boil:"payment_month"`
+	Amount       float64   `boil:"amount"`
 }
 
 func (x *HardworkingStaff) GetScanDests() []interface{} {
