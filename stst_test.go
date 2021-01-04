@@ -18,7 +18,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func testConnectDB(t *testing.T) *sql.DB {
+func testConnectPsql(t *testing.T) *sql.DB {
 	t.Helper()
 
 	dbconf := DBConf{}
@@ -36,6 +36,7 @@ func testConnectDB(t *testing.T) *sql.DB {
 
 func testCreateDatabase(t *testing.T, db *sql.DB) {
 	// Create database, tables and insert test data.
+	t.Helper()
 
 	matches, err := filepath.Glob("testdata/schemas/*.sql")
 	if err != nil {
@@ -93,7 +94,7 @@ func TestStst_GetMeta(t *testing.T) {
 		db *sql.DB
 	}
 
-	db := testConnectDB(t)
+	db := testConnectPsql(t)
 	testCreateDatabase(t, db)
 
 	s := NewPsql(db)

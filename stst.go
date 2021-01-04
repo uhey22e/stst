@@ -18,14 +18,14 @@ type Stst struct {
 	Typemap Typemap
 }
 
-// ColInfo .
+// ColInfo is a concrete representation of a column and a member of struct.
 type ColInfo struct {
 	Name        string
 	GoTypeName  string
 	PackagePath string
 }
 
-// DBConf .
+// DBConf contains configurations connecting to database.
 type DBConf struct {
 	Host     string `env:"DB_HOST" envDefault:"127.0.0.1"`
 	Port     int    `env:"DB_PORT" envDefault:"5432"`
@@ -35,8 +35,13 @@ type DBConf struct {
 	SSLMode  string `env:"DB_SSLMODE" envDefault:"disable"`
 }
 
+// Typemap is an interface
+type Typemap interface {
+	// GetGoType returns a golang type name mapped from the database type name
+	GetGoType(databaseTypeName string) (string, bool)
+}
+
 var (
-	dsn         = "postgresql://postgres@localhost:15432/postgres?sslmode=disable"
 	errCols     = "Failed to read columns"
 	errColTypes = "Failed to read column types"
 )
@@ -91,7 +96,7 @@ func (s *Stst) GetMeta(query string) ([]ColInfo, error) {
 	return ms, nil
 }
 
-// GenerateStruct .
+// GenerateStruct assembles the struct from ColInfo.
 func (s *Stst) GenerateStruct(name string, cols []ColInfo) (*jen.Statement, error) {
 	st := jen.Type().Id(name).StructFunc(func(g *jen.Group) {
 		for _, c := range cols {
@@ -102,7 +107,7 @@ func (s *Stst) GenerateStruct(name string, cols []ColInfo) (*jen.Statement, erro
 	return st, nil
 }
 
-// GenerateGetScanDestsFunc .
+// GenerateGetScanDestsFunc assembles the GetScanDests() function from ColInfo.
 func (s *Stst) GenerateGetScanDestsFunc(structName string, cols []ColInfo) (*jen.Statement, error) {
 	recn := "x"
 	rec := jen.Id(recn).Op("*").Id(structName)
@@ -124,7 +129,7 @@ func (s *Stst) GenerateGetScanDestsFunc(structName string, cols []ColInfo) (*jen
 	return res, nil
 }
 
-// GenerateQueryVar .
+// GenerateQueryVar assembles the variable definition of the query.
 func (s *Stst) GenerateQueryVar(name, query string) (*jen.Statement, error) {
 	q := strings.Trim(query, "\n")
 	vn := name + "Query"
