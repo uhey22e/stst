@@ -11,7 +11,9 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
         ports:
-          - 5432:5432
+          - 5432/tcp
+        # needed because the postgres container does not provide a healthcheck
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v1
@@ -20,4 +22,4 @@ jobs:
       - run: go test -v
         env:
           DB_HOST: localhost
-          DB_PORT: 5432
+          DB_PORT: ${{ job.services.postgres.ports[5432] }}
