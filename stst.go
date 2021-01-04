@@ -25,6 +25,16 @@ type ColInfo struct {
 	PackagePath string
 }
 
+// DBConf .
+type DBConf struct {
+	Host     string `env:"DB_HOST" envDefault:"127.0.0.1"`
+	Port     int    `env:"DB_PORT" envDefault:"5432"`
+	DBName   string `env:"DB_DBNAME" envDefault:"postgres"`
+	Username string `env:"DB_USERNAME" envDefault:"postgres"`
+	Password string `env:"DB_PASSWORD" envDefault:"postgres"`
+	SSLMode  string `env:"DB_SSLMODE" envDefault:"disable"`
+}
+
 var (
 	dsn         = "postgresql://postgres@localhost:15432/postgres?sslmode=disable"
 	errCols     = "Failed to read columns"

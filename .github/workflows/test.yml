@@ -3,12 +3,21 @@ on: [push]
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:11
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Go 1.13
-        uses: actions/setup-go@v1
+      - uses: actions/setup-go@v1
         with:
           go-version: 1.13
-      - run: |
-          docker run -ti --rm -p 15432:5432 -e POSTGRES_PASSWORD=postgres postgres:11
       - run: go test -v
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
