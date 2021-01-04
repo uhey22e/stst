@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/dave/jennifer/jen"
 	"github.com/google/go-cmp/cmp"
 	_ "github.com/lib/pq"
@@ -20,8 +21,13 @@ import (
 func testConnectDB(t *testing.T) *sql.DB {
 	t.Helper()
 
-	dsn := "postgresql://postgres:postgres@localhost:15432/postgres?sslmode=disable"
-	db, err := sql.Open("postgres", dsn)
+	dbconf := DBConf{}
+	if err := env.Parse(&dbconf); err != nil {
+		t.Fatal(err)
+	}
+
+	conninfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", dbconf.Host, dbconf.Port, dbconf.Username, dbconf.Password, dbconf.DBName, dbconf.SSLMode)
+	db, err := sql.Open("postgres", conninfo)
 	if err != nil {
 		t.Fatal(err)
 	}
